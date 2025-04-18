@@ -1,0 +1,16 @@
+# Main Python requirements for the MLOps project
+fastapi
+uvicorn
+scikit-learn
+pandas
+numpy
+mlflow
+joblib
+python-dotenv
+loguru
+prometheus-client
+docker
+httpx
+pytest
+tqdm
+torch

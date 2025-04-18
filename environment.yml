@@ -1,0 +1,23 @@
+name: UAPS
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - fastapi
+  - uvicorn
+  - scikit-learn
+  - pandas
+  - numpy
+  - mlflow
+  - joblib
+  - pip
+  - pip:
+      - python-dotenv
+      - loguru
+      - prometheus-client
+      - docker
+      - httpx
+      - pytest
+      - tqdm
+      - torch
