@@ -103,15 +103,16 @@ class ModelBuilder:
 
 if __name__ == "__main__":
     # Load dataset
-    #try:
-        #df = pd.read_csv("cleaned_data.csv")
-        #logging.info("Dataset loaded successfully.")
-    #except FileNotFoundError:
-        #logging.error("File 'cleaned_data.csv' not found.")
-        #exit()
+    try:
+        df = pd.read_csv("/Users/rouablel/Uncovering-airline-passenger-satisfaction/Data/train.csv")
+
+        logging.info("Dataset loaded successfully.")
+    except FileNotFoundError:
+        logging.error("File 'train.csv' not found.")
+        exit()
 
     # Define the target column
-    #target_column = "satisfaction"
+    target_column = "satisfaction"
 
     # Split the dataset into features and target
     #if target_column not in df.columns:

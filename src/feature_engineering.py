@@ -56,7 +56,7 @@ class MinMaxScaling(FeatureEngineeringStrategy):
 class OneHotEncoding(FeatureEngineeringStrategy):
     def __init__(self, features):
         self.features = features
-        self.encoder = OneHotEncoder(sparse=False, drop="first")
+        self.encoder = OneHotEncoder(sparse_output=False, drop="first")
 
     def apply_transformation(self, df: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Applying one-hot encoding to features: {self.features}")
@@ -102,27 +102,28 @@ class FeatureEngineer:
 # === Example Usage ===
 if __name__ == "__main__":
     # Example DataFrame (replace this with your actual dataset)
-    # df = pd.read_csv("your_dataset.csv")
+    df = pd.read_csv("/Users/rouablel/Uncovering-airline-passenger-satisfaction/Data/train.csv")
     
     # Assume these are predefined
-    #categorical_columns = [...]  # list of your categorical columns
-    #data_describe = df[categorical_columns].nunique()
+    categorical_columns = [c for c in df.columns if df[c].dtype.name == 'category']
+    # list of your categorical columns
+    data_describe = df[categorical_columns].nunique()
     
-    #binary_columns = [c for c in categorical_columns if data_describe[c] == 2]
-    #nonbinary_columns = [c for c in categorical_columns if data_describe[c] > 2]
-    #numerical_columns = df.select_dtypes(include="number").columns.tolist()
-    #numerical_columns = [col for col in numerical_columns if col != "satisfaction"]
+    binary_columns = [c for c in categorical_columns if data_describe[c] == 2]
+    nonbinary_columns = [c for c in categorical_columns if data_describe[c] > 2]
+    numerical_columns = df.select_dtypes(include="number").columns.tolist()
+    numerical_columns = [col for col in numerical_columns if col != "satisfaction"]
 
     # Binary Encoding
-    #binary_encoder = FeatureEngineer(BinaryEncoding(binary_columns))
-    #df = binary_encoder.apply_feature_engineering(df)
+    binary_encoder = FeatureEngineer(BinaryEncoding(binary_columns))
+    df = binary_encoder.apply_feature_engineering(df)
 
     # One-Hot Encoding
-    #onehot_encoder = FeatureEngineer(OneHotEncoding(nonbinary_columns))
-    #df = onehot_encoder.apply_feature_engineering(df)
+    onehot_encoder = FeatureEngineer(OneHotEncoding(nonbinary_columns))
+    df = onehot_encoder.apply_feature_engineering(df)
 
     # Standard Scaling
-    #scaler = FeatureEngineer(StandardScaling(numerical_columns))
-    #df = scaler.apply_feature_engineering(df)
+    scaler = FeatureEngineer(LogTransformation(numerical_columns))
+    df = scaler.apply_feature_engineering(df)
 
-    #print("Transformed dataset shape:", df.shape)
+    print("Transformed dataset shape:", df.shape)

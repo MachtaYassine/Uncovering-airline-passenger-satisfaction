@@ -49,23 +49,18 @@ class FillSpecificColumnWithMedianStrategy(MissingValueHandlingStrategy):
     
 
 
-    if __name__ == "__main__":
-        # Setup logging
-        #logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+if __name__ == "__main__":
 
-        # Example DataFrame with missing values
-        #data = {
-            #'Arrival Delay in Minutes': [10, None, 30, 20, None],
-            #'Other Column': [1, 2, 3, 4, 5]
-        #}
-        #df = pd.DataFrame(data)
-        #print("Original DataFrame:")
-        #print(df)
+    # Example DataFrame with missing values
+    df = pd.read_csv("/Users/rouablel/Uncovering-airline-passenger-satisfaction/Data/train.csv")
 
-       # Apply the missing value strategy
-        #strategy = FillSpecificColumnWithMedianStrategy(column='Arrival Delay in Minutes')
-        #df_filled = strategy.handle(df)
+    print("Original DataFrame:")
+    print(df.isna().sum())
 
-        #print("\nDataFrame after applying FillSpecificColumnWithMedianStrategy:")
-        #print(df_filled)
+    # Apply the missing value strategy
+    strategy = FillSpecificColumnWithMedianStrategy(column='Arrival Delay in Minutes')
+    df_filled = strategy.handle(df)
+
+    print("\nDataFrame after applying FillSpecificColumnWithMedianStrategy:")
+    print(df_filled.isna().sum())
 
