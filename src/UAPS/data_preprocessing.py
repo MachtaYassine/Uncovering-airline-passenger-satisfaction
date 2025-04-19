@@ -71,8 +71,7 @@ def preprocess_data(df):
         df[col] = df[col].astype(float)
     return df
 
-
-if __name__ == "__main__":
+def main():
     import argparse
     import os
     parser = argparse.ArgumentParser(description="Preprocess raw airline passenger data.")
@@ -129,3 +128,6 @@ if __name__ == "__main__":
             print(f"Error during test preprocessing or saving: {e}")
     elif os.path.exists(args.test_output) and not args.override:
         print(f"{args.test_output} already exists. Skipping test processing.")
+
+if __name__ == "__main__":
+    main()

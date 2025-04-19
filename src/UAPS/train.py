@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
-from src.model import TorchMLP
+from UAPS.model import TorchMLP
 import mlflow.pytorch
 
 def train_torch_model(X_train, y_train, X_val, y_val, epochs=10, lr=1e-3, hidden_dim=64, use_progress_bar=True):
@@ -88,10 +88,10 @@ def evaluate_model(model, X_test, y_test):
     print(classification_report(y_test, predictions))
     return accuracy
 
-if __name__ == "__main__":
+def main():
     import argparse
     import mlflow
-    from src.data_preprocessing import load_data, clean_data, preprocess_data
+    from UAPS.data_preprocessing import load_data, clean_data, preprocess_data
     parser = argparse.ArgumentParser(description="Train a machine learning model.")
     parser.add_argument("--train_path", type=str, default="data/raw/train.csv", help="Path to the training CSV file.")
     parser.add_argument("--test_path", type=str, default="data/raw/test.csv", help="Path to the test CSV file.")
@@ -188,3 +188,6 @@ if __name__ == "__main__":
             print(f"Run ID: {active_run.info.run_id}")
         mlflow.end_run()
         print("Experiment completed.")
+
+if __name__ == "__main__":
+    main()

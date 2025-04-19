@@ -19,6 +19,54 @@ pip install -r requirements.txt
 
 ---
 
+## Installation
+
+Install the package in editable mode from the project root:
+
+```bash
+pip install -e .
+```
+
+---
+
+## Usage
+
+### Training
+
+Train a model (example for PyTorch):
+
+```bash
+train --model-type torch_nn --hidden-dim 64 --epochs 20 --lr 0.001
+```
+
+See all options:
+```bash
+train -h
+```
+
+### Inference
+
+Run inference on a trained model:
+
+```bash
+infer --experiment_id <EXPERIMENT_ID> --run_id <RUN_ID> --input_csv data/processed/test_processed.csv
+```
+
+See all options:
+```bash
+infer -h
+```
+
+### Clear MLflow Runs
+
+Clear the mlruns directory (with confirmation):
+
+```bash
+clear_mlruns
+```
+
+---
+
 ### 2. Data Preprocessing
 
 Preprocess the raw data (train and test):
@@ -31,33 +79,7 @@ This will create `data/processed/train_processed.csv` and `data/processed/test_p
 
 ---
 
-### 3. Model Training & Benchmarking
 
-Train a model and log results with MLflow. Example commands:
-
-**Random Forest:**
-```bash
-python -m src.train --model-type random_forest --n-estimators 100
-```
-
-**Logistic Regression:**
-```bash
-python -m src.train --model-type logistic_regression --max-iter 200
-```
-
-**MLP (sklearn):**
-```bash
-python -m src.train --model-type mlp --hidden-dim 64 --max-iter 200
-```
-
-**PyTorch Neural Network:**
-```bash
-python -m src.train --model-type torch_nn --hidden-dim 64 --epochs 20 --lr 0.001
-```
-
-To disable MLflow logging, add `--no-mlflow`.
-
----
 
 ### 4. MLflow Tracking
 
@@ -97,3 +119,9 @@ pytest tests/
 - Adjust paths and parameters as needed for your use case.
 - Make sure to preprocess data before training or inference.
 - For custom models, update `src/model.py` and `src/inference.py` accordingly.
+- You no longer need to use `python -m src.train` or `python -m src.inference`.
+- All commands are available directly after `pip install -e .`.
+- For more help on each command, use the `-h` flag (e.g., `train -h`).
+- Make sure your data is preprocessed before training or inference.
+
+---
