@@ -24,6 +24,9 @@ def preprocess_data(df):
     # Drop id column if present
     if 'id' in df.columns:
         df = df.drop('id', axis=1)
+    # Drop Unnamed: 0 column if present (artifact from pandas CSV)
+    if 'Unnamed: 0' in df.columns:
+        df = df.drop('Unnamed: 0', axis=1)
     # Define columns
     categorical_columns = ['Gender', 'Customer Type', 'Type of Travel', 'Class']
     ordinal_columns = [
@@ -68,60 +71,6 @@ def preprocess_data(df):
         df[col] = df[col].astype(float)
     return df
 
-def debug_preprocess_data(df):
-    print('Step 1: Identify categorical columns')
-    categorical_columns = [
-        'Gender', 'Customer Type', 'Type of Travel', 'Class',
-        'Inflight wifi service', 'Departure/Arrival time convenient',
-        'Ease of Online booking', 'Gate location', 'Food and drink',
-        'Online boarding', 'Seat comfort', 'Inflight entertainment',
-        'On-board service', 'Leg room service', 'Baggage handling',
-        'Checkin service', 'Inflight service', 'Cleanliness'
-    ]
-    categorical_columns = [c for c in categorical_columns if c in df.columns]
-    for col in categorical_columns:
-        df[col] = df[col].astype('category')
-    print('Step 2: Split categorical columns')
-    data_describe = df.describe(include=['category'])
-    print('Step 3: Find binary/non-binary columns')
-    binary_columns = [c for c in categorical_columns if data_describe[c]['unique'] == 2]
-    nonbinary_columns = [c for c in categorical_columns if data_describe[c]['unique'] > 2]
-    print('Step 4: Binarize binary columns')
-    for col in binary_columns:
-        df[col] = df[col].astype('object')
-        k = 0
-        for uniq in df[col].unique():
-            df.loc[df[col] == uniq, col] = k
-            k += 1
-    print('Step 5: One-hot encode non-binary columns')
-    if nonbinary_columns:
-        print("Non-binary columns and their unique counts:")
-        max_unique = 50  # threshold for one-hot encoding
-        safe_nonbinary = []
-        skipped_nonbinary = []
-        for col in nonbinary_columns:
-            nunique = df[col].nunique()
-            if nunique <= max_unique:
-                safe_nonbinary.append(col)
-            else:
-                skipped_nonbinary.append(col)
-        if skipped_nonbinary:
-            print(f"Skipping one-hot encoding for columns with >{max_unique} unique values: {skipped_nonbinary}")
-        if safe_nonbinary:
-            data_nonbinary = pd.get_dummies(df[safe_nonbinary])
-        else:
-            data_nonbinary = pd.DataFrame(index=df.index)
-    else:
-        data_nonbinary = pd.DataFrame(index=df.index)
-    print('Step 6: Standardize numerical columns')
-    numerical_columns = [c for c in df.columns if c not in categorical_columns and c != 'satisfaction']
-    print(f"Numerical columns: {numerical_columns}")
-    # if numerical_columns:
-    #     data_numerical = df[numerical_columns]
-    #     data_numerical = (data_numerical - data_numerical.mean(axis=0)) / data_numerical.std(axis=0)
-    # else:
-    #     data_numerical = pd.DataFrame(index=df.index)
-    return
 
 if __name__ == "__main__":
     import argparse
@@ -132,10 +81,11 @@ if __name__ == "__main__":
     parser.add_argument('--test_input', type=str, default="data/raw/test.csv", help="Path to the raw test CSV file.")
     parser.add_argument('--test_output', type=str, default="data/processed/test_processed.csv", help="Path to save the processed test CSV file.")
     parser.add_argument('--debug', action='store_true', help="Enable debug mode to see preprocessing steps.")
+    parser.add_argument('--override', action='store_true', help="Override and recompute processed files even if they exist.")
     args = parser.parse_args()
 
-    # Only process if output does not exist
-    if not os.path.exists(args.output):
+    # Only process if output does not exist or override is set
+    if not os.path.exists(args.output) or args.override:
         print(f"Loading data from {args.input} ...")
         df = load_data(args.input)
         print("Cleaning data ...")
@@ -155,8 +105,8 @@ if __name__ == "__main__":
     else:
         print(f"{args.output} already exists. Skipping train processing.")
 
-    # Only process test if output does not exist
-    if args.test_input and args.test_output and not os.path.exists(args.test_output):
+    # Only process test if output does not exist or override is set
+    if args.test_input and args.test_output and (not os.path.exists(args.test_output) or args.override):
         print(f"Loading test data from {args.test_input} ...")
         df_test = load_data(args.test_input)
         print("Cleaning test data ...")
@@ -177,5 +127,5 @@ if __name__ == "__main__":
             print(f"Processed test data saved to {args.test_output}")
         except Exception as e:
             print(f"Error during test preprocessing or saving: {e}")
-    elif os.path.exists(args.test_output):
+    elif os.path.exists(args.test_output) and not args.override:
         print(f"{args.test_output} already exists. Skipping test processing.")

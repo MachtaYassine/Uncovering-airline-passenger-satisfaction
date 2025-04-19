@@ -16,6 +16,7 @@ import torch.optim as optim
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from src.model import TorchMLP
+import mlflow.pytorch
 
 def train_torch_model(X_train, y_train, X_val, y_val, epochs=10, lr=1e-3, hidden_dim=64, use_progress_bar=True):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -158,9 +159,14 @@ if __name__ == "__main__":
             mlflow.log_param("epochs", args.epochs)
             mlflow.log_param("lr", args.lr)
             model = train_torch_model(X_train, y_train, X_test, y_test, epochs=args.epochs, lr=args.lr, hidden_dim=args.hidden_dim)
-            torch.save(model.state_dict(), "torch_nn_model.pth")
-            mlflow.log_artifact("torch_nn_model.pth")
-            mlflow.set_tag("model_file", "torch_nn_model.pth")
+            model.cpu()
+            input_example = X_test.astype('float32').iloc[:2]
+            mlflow.pytorch.log_model(
+                model,
+                artifact_path="model",
+                input_example=input_example
+            )
+            mlflow.set_tag("model_file", "mlflow_pytorch")  
         else:
             model = get_model(args, input_dim=X_train.shape[1], num_classes=len(set(y_train)))
             print("Training model...")
@@ -176,5 +182,9 @@ if __name__ == "__main__":
             input_example = X_train.iloc[:1]
             mlflow.sklearn.log_model(model, "model", signature=signature, input_example=input_example)
             mlflow.set_tag("model_file", "mlflow_sklearn")
+        active_run = mlflow.active_run()
+        if active_run is not None:
+            print(f"Experiment ID: {active_run.info.experiment_id}")
+            print(f"Run ID: {active_run.info.run_id}")
         mlflow.end_run()
         print("Experiment completed.")
