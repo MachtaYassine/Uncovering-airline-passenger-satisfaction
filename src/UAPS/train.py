@@ -101,7 +101,7 @@ def cross_validate_model(model, X, y, args, cv=5, batch_size=64, lr=1e-3, epochs
     """
     kf = KFold(n_splits=cv, shuffle=True, random_state=42)
     fold = 1
-    total_accuracy = 0
+    cv_scores = list()
 
     # Loop over each fold
     for train_idx, val_idx in kf.split(X):
@@ -118,12 +118,21 @@ def cross_validate_model(model, X, y, args, cv=5, batch_size=64, lr=1e-3, epochs
             model, evaluation_results = train_model(X_train_fold, y_train_fold, X_val_fold, y_val_fold, args, use_progress_bar=True)
         accuracy = evaluation_results["accuracy"]
         print(f"Validation Accuracy for Fold {fold}: {accuracy:.4f}")
+        
         fold += 1
-        total_accuracy += accuracy
+        cv_scores.append(accuracy)
 
     # Calculate average accuracy across all folds
-    avg_accuracy = total_accuracy / cv
+    avg_accuracy = np.mean(cv_scores)
     print(f"Average Cross-Validation Accuracy: {avg_accuracy:.4f}")
+
+    # Log each fold's accuracy as a separate metric (optional)
+    for i, score in enumerate(cv_scores):
+        mlflow.log_metric(f"cv_fold_{i+1}_accuracy", score)
+
+    # Log mean and std of CV accuracy
+    mlflow.log_metric("mean_cv_accuracy", np.mean(cv_scores))
+    mlflow.log_metric("std_cv_accuracy", np.std(cv_scores))
 
 
 
@@ -213,6 +222,7 @@ def main():
                 artifact_path="model",
                 input_example=input_example
             )
+            mlflow.log_metric("test accuracy", acc)
             mlflow.set_tag("model_file", "mlflow_pytorch")  
         else:
             print("Training model...")
@@ -222,7 +232,7 @@ def main():
             cross_validate_model(model, X_train, y_train, args)
             print(f"Final accuracy on test set: {acc:.4f}")
             mlflow.log_param("model_type", args.model_type)
-            mlflow.log_metric("accuracy", acc)
+            mlflow.log_metric("test accuracy", acc)
             signature = infer_signature(X_train, model.predict(X_train))
             input_example = X_train.iloc[:1]
             mlflow.sklearn.log_model(model, "model", signature=signature, input_example=input_example)
