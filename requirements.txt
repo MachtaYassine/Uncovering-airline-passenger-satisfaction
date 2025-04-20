@@ -1,5 +1,12 @@
-numpy
-pandas
-matplotlib
-seaborn
+# Main Python requirements for the MLOps project
+fastapi
+uvicorn
 scikit-learn
+pandas
+numpy
+mlflow
+docker
+httpx
+pytest
+tqdm
+torch
