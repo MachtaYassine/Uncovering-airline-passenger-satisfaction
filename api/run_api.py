@@ -1,6 +1,7 @@
 import os
 import argparse
 import uvicorn
+import sys
 
 def main():
     parser = argparse.ArgumentParser(description="Run FastAPI with MLflow model selection.")
@@ -10,6 +11,9 @@ def main():
     parser.add_argument("--port", type=int, default=8000, help="Port for the API server")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     args = parser.parse_args()
+
+    # Ensure project root is in sys.path for module resolution
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     os.environ["EXPERIMENT_ID"] = args.experiment_id
     os.environ["RUN_ID"] = args.run_id
