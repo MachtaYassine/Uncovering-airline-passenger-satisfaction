@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main  # or your default branch
+    paths:
+      - 'src/**'
+      - 'data/**'
+      - 'api/**'
+      - 'docker/**'
 
 jobs:
   docker:
