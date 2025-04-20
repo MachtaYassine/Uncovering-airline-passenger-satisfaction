@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airline-satisfaction-deployment
+  labels:
+    app: airline-satisfaction
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airline-satisfaction
+  template:
+    metadata:
+      labels:
+        app: airline-satisfaction
+    spec:
+      containers:
+      - name: airline-satisfaction
+        image: ymachta/airline-satisfaction:latest
+        ports:
+        - containerPort: 8000
