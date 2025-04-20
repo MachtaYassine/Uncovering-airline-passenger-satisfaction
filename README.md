@@ -36,6 +36,9 @@ pip install -e .
 Train a model (example for PyTorch):
 
 ```bash
+train --model-type random_forest --n-estimators 200
+train --model-type logistic_regression --max-iter 300
+train --model-type mlp --hidden-dim 128 --max-iter 500
 train --model-type torch_nn --hidden-dim 64 --epochs 20 --lr 0.001
 ```
 
@@ -96,19 +99,8 @@ Then open [http://localhost:5000](http://localhost:5000) in your browser.
 
 ---
 
-### 5. Inference
 
-For tabular models (sklearn, torch), use your own inference logic or extend `src/inference.py` as needed.
-
-For text models (example in `src/inference.py`):
-
-```bash
-python -m src.inference --model_path <path_to_model> --tokenizer_path <path_to_tokenizer> --text "Your text here"
-```
-
----
-
-### 6. Testing
+### 5. Testing
 
 Run tests with:
 
