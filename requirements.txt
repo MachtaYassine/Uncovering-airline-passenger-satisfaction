@@ -5,9 +5,8 @@ scikit-learn
 pandas
 numpy
 mlflow
-docker
-httpx
 pytest
 tqdm
 torch --index-url https://download.pytorch.org/whl/cpu
 python-multipart
+

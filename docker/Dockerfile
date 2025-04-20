@@ -6,24 +6,27 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies (if needed)
-RUN apt-get update && apt-get install -y 
-
 # Copy requirements and install Python dependencies
 COPY requirements.txt ./
 COPY setup.py ./
 RUN pip install --upgrade pip 
-RUN pip install -r requirements.txt 
+RUN pip install --no-cache-dir -r requirements.txt 
 
 # Copy source code, API, and MLflow runs (if needed for local serving)
 COPY src/ ./src/
 COPY api/ ./api/
-COPY mlruns/ ./mlruns/
+COPY data/ ./data
+COPY deployment ./deployment
 
 RUN pip install -e .
+
+RUN train --model-type torch_nn --hidden-dim 64 --epochs 20 --lr 0.001
+RUN train --model-type random_forest --n-estimators 50
+RUN train --model-type logistic_regression --max-iter 100
+
 
 # Expose FastAPI port
 EXPOSE 8000
 
 # Default command to run the FastAPI app
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "api/run_api.py", "--reload"]

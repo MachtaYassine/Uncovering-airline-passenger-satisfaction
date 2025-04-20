@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: airline-satisfaction
-        image: ymachta/airline-satisfaction:latest
+        image: ymachta/uaps:latest
         ports:
         - containerPort: 8000
