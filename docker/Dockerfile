@@ -18,7 +18,8 @@ RUN pip install -r requirements.txt
 # Copy source code, API, and MLflow runs (if needed for local serving)
 COPY src/ ./src/
 COPY api/ ./api/
-
+COPY data/ ./data
+COPY deployment ./deployment
 
 RUN pip install -e .
 
