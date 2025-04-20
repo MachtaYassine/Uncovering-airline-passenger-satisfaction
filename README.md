@@ -2,7 +2,9 @@
 
 ## Usage Instructions
 
-### 1. Environment Setup
+---
+
+## 1. Environment Setup
 
 Install dependencies (using conda):
 
@@ -19,7 +21,7 @@ pip install -r requirements.txt
 
 ---
 
-## Installation
+## 2. Installation
 
 Install the package in editable mode from the project root:
 
@@ -29,11 +31,21 @@ pip install -e .
 
 ---
 
-## Usage
+## 3. Data Preprocessing
 
-### Training
+Preprocess the raw data (train and test):
 
-Train a model (example for PyTorch):
+```bash
+preprocess
+```
+
+This will create `data/processed/train_processed.csv` and `data/processed/test_processed.csv` if they do not already exist.
+
+---
+
+## 4. Training
+
+Train a model (examples):
 
 ```bash
 train --model-type random_forest --n-estimators 200
@@ -47,14 +59,16 @@ See all options:
 train -h
 ```
 
-### Inference
+---
+
+## 5. Inference
 
 Run inference on a trained model:
 
 ```bash
 infer --experiment_id <EXPERIMENT_ID> --run_id <RUN_ID> --input_csv data/processed/test_processed.csv
 ```
-Run inference using the best trained model (model with best accuracy):
+Or use the best trained model:
 
 ```bash
 infer --input_csv data/processed/test_processed.csv
@@ -65,29 +79,9 @@ See all options:
 infer -h
 ```
 
-### Clear MLflow Runs
-
-Clear the mlruns directory (with confirmation):
-
-```bash
-clear_mlruns
-```
-
 ---
 
-### 2. Data Preprocessing
-
-Preprocess the raw data (train and test):
-
-```bash
-python -m UAPS.data_preprocessing
-```
-
-This will create `data/processed/train_processed.csv` and `data/processed/test_processed.csv` if they do not already exist.
-
----
-
-### 4. MLflow Tracking
+## 6. MLflow Tracking (Optional)
 
 To compare and benchmark models, launch the MLflow UI:
 
@@ -99,8 +93,7 @@ Then open [http://localhost:5000](http://localhost:5000) in your browser.
 
 ---
 
-
-### 5. Testing
+## 7. Testing
 
 Run tests with:
 
@@ -110,19 +103,20 @@ pytest tests/
 
 ---
 
-## API Usage
+## 8. API Usage (Local)
 
-### Launch the FastAPI Model API
-
-You can serve the best MLflow model as an API using FastAPI. Use the provided runner script:
+Launch the FastAPI Model API:
 
 ```bash
 python api/run_api.py --experiment_id <EXPERIMENT_ID> --run_id <RUN_ID> --reload
 ```
+Or simply:
 
-- Replace `<EXPERIMENT_ID>` and `<RUN_ID>` with the values for your best model (see the mlruns directory or MLflow UI).
+```bash
+python api/run_api.py --reload
+```
+
 - The API will be available at http://localhost:8000
-
 
 ### Using the API for Inference
 
@@ -139,8 +133,6 @@ python api/run_api.py --experiment_id <EXPERIMENT_ID> --run_id <RUN_ID> --reload
 curl -X POST "http://localhost:8000/predict" -F "file=@data/processed/test_processed.csv"
 ```
 
-
-
 ### Using the API for Inference with Preprocessing
 
 You can control whether the API should preprocess your input data before making predictions by using the `preprocess` query parameter:
@@ -152,17 +144,64 @@ curl -X POST "http://localhost:8000/predict?preprocess=true" -F "file=@data/raw/
 - If `preprocess=true`, the API will preprocess your raw input data before inference.
 - If omitted or set to `false`, the API will use your data as-is (assumes it is already preprocessed).
 
+---
+
+## 9. Using the Docker Image
+
+To pull the Docker image from Docker Hub:
+
+```bash
+docker pull ymahta/uaps:latest
+```
+
+To run the Docker image and start the API (exposes port 8000):
+
+```bash
+docker run -p 8000:8000 ymahta/uaps:latest
+```
+
+You can now access the API at [http://localhost:8000](http://localhost:8000) or use the `/predict` endpoint as follows:
+
+```bash
+curl -X POST "http://localhost:8000/predict" -F "file=@data/processed/test_processed.csv"
+```
 
 
 ---
 
-**Note:**
-- Adjust paths and parameters as needed for your use case.
-- Make sure to preprocess data before training or inference.
-- For custom models, update `src/model.py` and `src/inference.py` accordingly.
-- You no longer need to use `python -m src.train` or `python -m src.inference`.
-- All commands are available directly after `pip install -e .`.
-- For more help on each command, use the `-h` flag (e.g., `train -h`).
-- Make sure your data is preprocessed before training or inference.
+## 10. Using the Exposed API (Cloud)
+
+To use the deployed API, you can send a CSV file to get predictions:
+
+```bash
+curl -X POST "https://airline-satisfaction.lab.sspcloud.fr/predict" -F "file=@data/processed/test_processed.csv"
+```
 
 ---
+
+## 11. Project Delivery Information
+
+The main project repository is available here:
+- https://github.com/rouaabl/Uncovering-airline-passenger-satisfaction
+
+To enable automation (CI/CD) with GitHub Actions and automate Docker updates, we had to use a fork, since only repository administrators can configure the required GitHub secrets. You can view the fork containing the workflows here:
+- https://github.com/MachtaYassine/Uncovering-airline-passenger-satisfaction/actions
+
+We have also set up a dedicated repository for automation operations (Docker updates via Kubernetes and ArgoCD) and the API is deployed at this host:
+- https://airline-satisfaction.lab.sspcloud.fr
+- https://github.com/MachtaYassine/UAPS-Ops
+
+---
+
+## 12. Issues and Limitations
+
+- **Docker Image Size**: The generated Docker image is relatively large, Compressed it at 3 gigs and 9 uncompressed. In docker hub we saw that 3 out of the 3.2GB compressed image came from pip installing packages.
+
+
+---
+
+## 13. Illustrations
+
+
+### 3. Kubernetes Deployment with ArgoCD
+![ArgoCD Kubernetes Setup](readme_assets/argocd.png)
