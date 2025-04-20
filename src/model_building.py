@@ -102,6 +102,10 @@ class ModelBuilder:
 
 
 if __name__ == "__main__":
+    from src import handle_missing_values,feature_engineering,preprocessing
+
+
+
     # Load dataset
     try:
         df = pd.read_csv("/Users/rouablel/Uncovering-airline-passenger-satisfaction/Data/train.csv")
@@ -110,30 +114,57 @@ if __name__ == "__main__":
     except FileNotFoundError:
         logging.error("File 'train.csv' not found.")
         exit()
+    # Apply the missing value strategy
+    strategy = handle_missing_values.FillSpecificColumnWithMedianStrategy(column='Arrival Delay in Minutes')
+    df = strategy.handle(df)
+    prep = preprocessing.Preprocessor(drop_cols=['ID'], cat_cols=['Gender', 'Customer Type', 'Type of Travel',
+                                                    'Class', 'Inflight wifi service', 'Departure/Arrival time convenient',
+                                                      'Ease of Online booking', 'Gate location', 'Food and drink',
+                                                        'Online boarding', 'Seat comfort', 'Inflight entertainment',
+                                                          'On-board service', 'Leg room service', 'Baggage handling',
+                                                            'Checkin service', 'Inflight service', 'Cleanliness',"satisfaction"])
+    df = prep.transform(df)
+
+
+    categorical_columns = [c for c in df.columns if df[c].dtype.name == 'category']
+    # list of your categorical columns
+    data_describe = df[categorical_columns].nunique()
+    
+    binary_columns = [c for c in categorical_columns if data_describe[c] == 2]
+    nonbinary_columns = [c for c in categorical_columns if data_describe[c] > 2]
+    numerical_columns = df.select_dtypes(include="number").columns.tolist()
+    numerical_columns = [col for col in numerical_columns if col != "satisfaction"]
+
+    # Binary Encoding
+    binary_encoder = feature_engineering.FeatureEngineer(feature_engineering.BinaryEncoding(binary_columns))
+    df = binary_encoder.apply_feature_engineering(df)
+
+    # One-Hot Encoding
+    onehot_encoder = feature_engineering.FeatureEngineer(feature_engineering.OneHotEncoding(nonbinary_columns))
+    df = onehot_encoder.apply_feature_engineering(df)
+
+    # Standard Scaling
+    scaler = feature_engineering.FeatureEngineer(feature_engineering.LogTransformation(numerical_columns))
+    df = scaler.apply_feature_engineering(df)
 
     # Define the target column
     target_column = "satisfaction"
 
+
     # Split the dataset into features and target
-    #if target_column not in df.columns:
-        #logging.error(f"Target column '{target_column}' not found in the dataset.")
-        #exit()
+    if target_column not in df.columns:
+        #ogging.error(f"Target column '{target_column}' not found in the dataset.")
+        exit()
 
-    #X = df.drop(columns=[target_column])
-    #y = df[target_column]
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
 
-    # Ensure y is numeric (e.g., convert labels to 0/1 or numeric scores if necessary)
-    #if y.dtype == 'object':
-        #y = pd.factorize(y)[0]
-
-    # Perform train-test split (just for model testing)
-    #from sklearn.model_selection import train_test_split
-    #X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42)
+    
 
     # Build and train the model
-    #model_builder = ModelBuilder(LinearRegressionStrategy())
-    #trained_model = model_builder.build_model(X_train, y_train)
+    model_builder = ModelBuilder(LinearRegressionStrategy())
+    trained_model = model_builder.build_model(X, y)
 
     # Print model coefficients
-    #print("Model Coefficients:")
-    #print(trained_model.named_steps['model'].coef_)
+    print("Model Coefficients:")
+    print(trained_model.named_steps['model'].coef_)
