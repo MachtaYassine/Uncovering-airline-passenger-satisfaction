@@ -1,6 +1,7 @@
 import os
 import argparse
 import pandas as pd
+import json
 import mlflow.pyfunc
 
 class Inference:
@@ -39,24 +40,57 @@ class Inference:
 
 def main():
     parser = argparse.ArgumentParser(description="Inference script for tabular MLflow models")
-    parser.add_argument("--experiment_id", type=str, required=True, help="MLflow experiment ID")
-    parser.add_argument("--run_id", type=str, required=True, help="MLflow run ID")
-    parser.add_argument("--input_csv", type=str, required=True, help="Path to CSV file with input data (must match training features)")
+    parser.add_argument("--experiment_id", type=str, required=True, help="Training MLflow experiment ID")
+    parser.add_argument("--run_id", type=str, required=True, help="Training MLflow run ID")
+    parser.add_argument("--input_csv", type=str, required=True, help="Path to CSV file with input data")
+    parser.add_argument("--output_dir", type=str, default="predictions", help="Directory to save prediction results and metadata")
+    parser.add_argument("--inference_experiment_name", type=str, default="inference", help="MLflow experiment name for logging inference run")
     args = parser.parse_args()
 
-    model_path = os.path.join("mlruns", args.experiment_id, args.run_id, "artifacts", "model")
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model folder not found at {model_path}")
+    # Set and create experiment for inference
+    mlflow.set_experiment(args.inference_experiment_name)
 
-    data = pd.read_csv(args.input_csv)
-    drop_cols = ['satisfaction']
-    for col in drop_cols:
-        if col in data.columns:
-            data = data.drop(columns=[col])
+    os.makedirs(args.output_dir, exist_ok=True)
 
-    inference = Inference(model_path)
-    preds = inference.predict(data)
-    print(preds)
+    with mlflow.start_run(run_name="inference_run") as run:
+        # Log training metadata
+        mlflow.log_param("training_experiment_id", args.experiment_id)
+        mlflow.log_param("training_run_id", args.run_id)
+        mlflow.log_param("training_input_csv", args.input_csv)
+        mlflow.log_param("output_dir", args.output_dir)
+
+        # Save those parameters as a file
+        params = {
+            "training_experiment_id": args.experiment_id,
+            "training_run_id": args.run_id,
+            "input_csv": args.input_csv
+        }
+        params_file = os.path.join(args.output_dir, "inference_params.json")
+        with open(params_file, "w") as f:
+            json.dump(params, f, indent=4)
+        mlflow.log_artifact(params_file)
+
+        # Load model
+        model_path = os.path.join("mlruns", args.experiment_id, args.run_id, "artifacts", "model")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model folder not found at {model_path}")
+
+        # Read input
+        data = pd.read_csv(args.input_csv)
+        if 'satisfaction' in data.columns:
+            data = data.drop(columns=['satisfaction'])
+
+        # Inference
+        inference = Inference(model_path)
+        preds = inference.predict(data)
+
+        # Save and log predictions
+        preds_df = pd.DataFrame(preds, columns=["prediction"])
+        pred_file = os.path.join(args.output_dir, "predictions.csv")
+        preds_df.to_csv(pred_file, index=False)
+        mlflow.log_artifact(pred_file)
+
+        print(f" Inference completed and logged in run {run.info.run_id}")
 
 if __name__ == "__main__":
     main()
