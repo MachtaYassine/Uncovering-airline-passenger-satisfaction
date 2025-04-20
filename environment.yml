@@ -4,18 +4,14 @@ channels:
   - conda-forge
 dependencies:
   - python=3.10
-  - fastapi
-  - uvicorn
-  - scikit-learn
-  - pandas
-  - numpy
-  - mlflow
-  - joblib
   - pip
   - pip:
-      - python-dotenv
-      - loguru
-      - prometheus-client
+      - fastapi
+      - uvicorn
+      - scikit-learn
+      - pandas
+      - numpy
+      - mlflow
       - docker
       - httpx
       - pytest
