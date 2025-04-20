@@ -1,0 +1,40 @@
+# Ignore Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+*.ipynb_checkpoints
+
+# Ignore virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Ignore data except for processed data if needed
+data/interim/
+data/external/
+data/*.zip
+data/*.tar.gz
+
+# Ignore test outputs
+tests/__pycache__/
+tests/*.pyc
+
+# Ignore notebooks (optional)
+notebooks/
+
+# Ignore git and editor files
+.git/
+.gitignore
+*.swp
+*.swo
+.DS_Store
+
+# Ignore deployment artifacts
+*.log
+
+# Ignore OS files
+Thumbs.db
+ehthumbs.db

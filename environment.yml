@@ -12,8 +12,6 @@ dependencies:
       - pandas
       - numpy
       - mlflow
-      - docker
-      - httpx
       - pytest
       - tqdm
       - torch
