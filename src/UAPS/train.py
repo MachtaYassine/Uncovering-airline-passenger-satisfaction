@@ -184,22 +184,42 @@ def main():
     parser.add_argument("--epochs", type=int, default=10, help="Epochs for TorchNN.")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for TorchNN.")
     parser.add_argument("--no-mlflow", action="store_true", help="Disable MLflow tracking and run regular training.")
+    parser.add_argument("--override-preprocess", action="store_true", help="Override and recompute processed data even if it exists.")
     args = parser.parse_args()
 
-    print("Loading training data...")
-    train_df = load_data(args.train_path)
-    print("Cleaning training data...")
-    train_df = clean_data(train_df)
-    print("Preprocessing training data...")
-    train_df = preprocess_data(train_df)
+    # Paths for processed data
+    processed_train_path = "data/processed/train_processed.csv"
+    processed_test_path = "data/processed/test_processed.csv"
+
+    # Training data
+    if os.path.exists(processed_train_path) and not args.override_preprocess:
+        print(f"Loading already processed training data from {processed_train_path} ...")
+        train_df = pd.read_csv(processed_train_path)
+    else:
+        print("Loading and processing raw training data ...")
+        train_df = load_data(args.train_path)
+        train_df = clean_data(train_df)
+        train_df = preprocess_data(train_df)
+        os.makedirs(os.path.dirname(processed_train_path), exist_ok=True)
+        train_df.to_csv(processed_train_path, index=False)
+        print(f"Processed training data saved to {processed_train_path}")
+
     X_train = train_df.drop(columns=[args.target_column])
     y_train = train_df[args.target_column]
-    print("Loading test data...")
-    test_df = load_data(args.test_path)
-    print("Cleaning test data...")
-    test_df = clean_data(test_df)
-    print("Preprocessing test data...")
-    test_df = preprocess_data(test_df)
+
+    # Test data
+    if os.path.exists(processed_test_path) and not args.override_preprocess:
+        print(f"Loading already processed test data from {processed_test_path} ...")
+        test_df = pd.read_csv(processed_test_path)
+    else:
+        print("Loading and processing raw test data ...")
+        test_df = load_data(args.test_path)
+        test_df = clean_data(test_df)
+        test_df = preprocess_data(test_df)
+        os.makedirs(os.path.dirname(processed_test_path), exist_ok=True)
+        test_df.to_csv(processed_test_path, index=False)
+        print(f"Processed test data saved to {processed_test_path}")
+
     X_test = test_df.drop(columns=[args.target_column])
     y_test = test_df[args.target_column]
 
