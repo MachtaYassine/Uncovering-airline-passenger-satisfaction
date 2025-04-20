@@ -91,19 +91,10 @@ mlflow ui
 
 Then open [http://localhost:5000](http://localhost:5000) in your browser.
 
----
-
-## 7. Testing
-
-Run tests with:
-
-```bash
-pytest tests/
-```
 
 ---
 
-## 8. API Usage (Local)
+## 7. API Usage (Local)
 
 Launch the FastAPI Model API:
 
@@ -146,7 +137,7 @@ curl -X POST "http://localhost:8000/predict?preprocess=true" -F "file=@data/raw/
 
 ---
 
-## 9. Using the Docker Image
+## 8. Using the Docker Image
 
 To pull the Docker image from Docker Hub:
 
@@ -169,7 +160,7 @@ curl -X POST "http://localhost:8000/predict" -F "file=@data/processed/test_proce
 
 ---
 
-## 10. Using the Exposed API (Cloud)
+## 9. Using the Exposed API (Cloud)
 
 To use the deployed API, you can send a CSV file to get predictions:
 
@@ -179,7 +170,7 @@ curl -X POST "https://airline-satisfaction.lab.sspcloud.fr/predict" -F "file=@da
 
 ---
 
-## 11. Project Delivery Information
+## 10. Project Delivery Information
 
 The main project repository is available here:
 - https://github.com/rouaabl/Uncovering-airline-passenger-satisfaction
@@ -193,14 +184,14 @@ We have also set up a dedicated repository for automation operations (Docker upd
 
 ---
 
-## 12. Issues and Limitations
+## 11. Issues and Limitations
 
 - **Docker Image Size**: The generated Docker image is relatively large, Compressed it at 3 gigs and 9 uncompressed. In docker hub we saw that 3 out of the 3.2GB compressed image came from pip installing packages.
 
 
 ---
 
-## 13. Illustrations
+## 12. Illustrations
 
 
 ### 3. Kubernetes Deployment with ArgoCD
