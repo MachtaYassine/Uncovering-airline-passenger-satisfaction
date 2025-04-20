@@ -42,6 +42,13 @@ async def predict(file: UploadFile = File(...), preprocess: bool = Query(False, 
     if preprocess:
         df = preprocess_data(df)
     preds = inference.predict(df)
+    # Save predictions to CSV in api_prediction folder
+    os.makedirs("api_prediction", exist_ok=True)
+    output_path = os.path.join("api_prediction", f"predictions.csv")
+    result_df = df.copy()
+    result_df['prediction'] = preds
+    result_df.to_csv(output_path, index=False)
+    print(f"Predictions saved to {output_path}")
     return {"predictions": preds.tolist()}
 
 @app.get("/")
