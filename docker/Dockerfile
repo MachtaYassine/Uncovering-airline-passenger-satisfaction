@@ -24,7 +24,7 @@ COPY deployment ./deployment
 RUN pip install -e .
 
 RUN train --model-type torch_nn --hidden-dim 64 --epochs 20 --lr 0.001
-RUN train --model-type random_forest --n-estimators 100
+RUN train --model-type random_forest --n-estimators 50
 RUN train --model-type logistic_regression --max-iter 100
 
 

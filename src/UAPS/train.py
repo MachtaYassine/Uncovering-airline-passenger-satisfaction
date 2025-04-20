@@ -79,7 +79,7 @@ def train_model(X_train, y_train, X_val, y_val, args, use_progress_bar=False):
     acc = accuracy_score(y_val, preds)
     if use_progress_bar:
         # Simulate progress bar for fitting (since sklearn fit is not incremental)
-        for _ in tqdm(range(1), desc="Fitting RandomForest"):
+        for _ in tqdm(range(1), desc="Fitting RandomForest" if args.model_type == 'random_forest' else "Fitting Logistic Regression" if args.model_type == 'logistic_regression' else "Fitting MLP"):
             model.fit(X_train, y_train)
     else:
         model.fit(X_train, y_train)
