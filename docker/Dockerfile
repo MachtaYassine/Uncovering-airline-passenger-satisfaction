@@ -12,12 +12,15 @@ RUN apt-get update && apt-get install -y
 # Copy requirements and install Python dependencies
 COPY requirements.txt ./
 COPY setup.py ./
-RUN pip install --upgrade pip && pip install -r requirements.txt && pip install fastapi uvicorn mlflow && pip install -e .
+RUN pip install --upgrade pip 
+RUN pip install -r requirements.txt 
 
 # Copy source code, API, and MLflow runs (if needed for local serving)
 COPY src/ ./src/
 COPY api/ ./api/
 COPY mlruns/ ./mlruns/
+
+RUN pip install -e .
 
 # Expose FastAPI port
 EXPOSE 8000

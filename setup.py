@@ -5,15 +5,6 @@ setup(
     version="0.1.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    install_requires=[
-        "scikit-learn",
-        "pandas",
-        "numpy",
-        "mlflow",
-        "joblib",
-        "tqdm",
-        "torch",
-    ],
     entry_points={
     'console_scripts': [
         'train=UAPS.train:main',
