@@ -3,6 +3,7 @@ import argparse
 import pandas as pd
 import json
 import mlflow.pyfunc
+from UAPS.data_preprocessing import preprocess_data
 
 def get_best_model():
     import re
@@ -18,35 +19,32 @@ def get_best_model():
     return model_path, best_model_name
 
 class Inference:
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, preprocess: bool = False):
         self.model = mlflow.pyfunc.load_model(model_path)
-        # Detect model type from MLflow tags or flavor
         self.model_type = None
+        self.preprocess = preprocess
         try:
-            # Try to get from MLflow tags
             tags = self.model.metadata.run_id and mlflow.get_run(self.model.metadata.run_id).data.tags
             if tags and "model_file" in tags:
                 self.model_type = tags["model_file"]
                 print(f"Detected model type from tags: {self.model_type}")
         except Exception:
             pass
-        # Fallback: check flavors
         if self.model_type is None:
             flavors = self.model.metadata.flavors
             if "pytorch" in flavors:
-                print("Detected PyTorch model")
                 self.model_type = "mlflow_pytorch"
+                print("Detected PyTorch model")
             elif "sklearn" in flavors:
-                print("Detected sklearn model")
                 self.model_type = "mlflow_sklearn"
-        
+                print("Detected sklearn model")
         
     def predict(self, data: pd.DataFrame):
-        # Handle dtype conversion based on model type
+        if self.preprocess:
+            data = preprocess_data(data)
         if self.model_type == "mlflow_pytorch":
             data = data.astype("float32")
         preds = self.model.predict(data)
-        # If output looks like logits/probs, convert to class labels
         if isinstance(preds, (pd.DataFrame, pd.DataFrame)) and preds.shape[1] > 1:
             return preds.values.argmax(axis=1)
         return preds
@@ -59,6 +57,7 @@ def main():
     parser.add_argument("--input_csv", type=str, required=True, help="Path to CSV file with input data")
     parser.add_argument("--output_dir", type=str, default="predictions", help="Directory to save prediction results and metadata")
     parser.add_argument("--inference_experiment_name", type=str, default="inference", help="MLflow experiment name for logging inference run")
+    parser.add_argument("--preprocess", action="store_true", help="Whether to preprocess the input data before inference.")
     args = parser.parse_args()
 
     # Set and create experiment for inference
@@ -89,7 +88,7 @@ def main():
             print(f"Loaded model from training run path: {model_path}")
 
         else:
-            print(f"⚠️ No Model provided, using best saved model instead.")
+            print(f"No Model provided, using best saved model instead.")
             # Fallback to best model
             model_path, best_model_name = get_best_model()
             mlflow.log_param("fallback_model_used", best_model_name)

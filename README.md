@@ -84,8 +84,6 @@ This will create `data/processed/train_processed.csv` and `data/processed/test_p
 
 ---
 
-
-
 ### 4. MLflow Tracking
 
 To compare and benchmark models, launch the MLflow UI:
@@ -117,6 +115,52 @@ Run tests with:
 ```bash
 pytest tests/
 ```
+
+---
+
+## API Usage
+
+### Launch the FastAPI Model API
+
+You can serve the best MLflow model as an API using FastAPI. Use the provided runner script:
+
+```bash
+python api/run_api.py --experiment_id <EXPERIMENT_ID> --run_id <RUN_ID> --reload
+```
+
+- Replace `<EXPERIMENT_ID>` and `<RUN_ID>` with the values for your best model (see the mlruns directory or MLflow UI).
+- The API will be available at http://localhost:8000
+
+
+### Using the API for Inference
+
+1. **Welcome Page:**
+   - Open [http://localhost:8000/](http://localhost:8000/) in your browser to see a welcome message and usage instructions.
+
+2. **Interactive Docs:**
+   - Visit [http://localhost:8000/docs](http://localhost:8000/docs) for the interactive OpenAPI UI where you can test the `/predict` endpoint.
+
+3. **Programmatic Inference:**
+   - Send a POST request to `/predict` with a CSV file containing your input data:
+
+```bash
+curl -X POST "http://localhost:8000/predict" -F "file=@data/processed/test_processed.csv"
+```
+
+
+
+### Using the API for Inference with Preprocessing
+
+You can control whether the API should preprocess your input data before making predictions by using the `preprocess` query parameter:
+
+```bash
+curl -X POST "http://localhost:8000/predict?preprocess=true" -F "file=@data/raw/test.csv"
+```
+
+- If `preprocess=true`, the API will preprocess your raw input data before inference.
+- If omitted or set to `false`, the API will use your data as-is (assumes it is already preprocessed).
+
+
 
 ---
 

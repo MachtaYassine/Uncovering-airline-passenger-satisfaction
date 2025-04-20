@@ -7,14 +7,12 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Install system dependencies (if needed)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y 
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt ./
 COPY setup.py ./
-RUN pip install --upgrade pip && pip install -r requirements.txt && pip install fastapi uvicorn mlflow python-multipart
+RUN pip install --upgrade pip && pip install -r requirements.txt && pip install fastapi uvicorn mlflow && pip install -e .
 
 # Copy source code, API, and MLflow runs (if needed for local serving)
 COPY src/ ./src/
@@ -24,5 +22,5 @@ COPY mlruns/ ./mlruns/
 # Expose FastAPI port
 EXPOSE 8000
 
-# Default command to run the FastAPI app using run_api.py
-CMD ["python", "api/run_api.py", "--host", "0.0.0.0", "--port", "8000"]
+# Default command to run the FastAPI app
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
