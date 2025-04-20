@@ -51,6 +51,11 @@ Run inference on a trained model:
 ```bash
 infer --experiment_id <EXPERIMENT_ID> --run_id <RUN_ID> --input_csv data/processed/test_processed.csv
 ```
+Run inference using the best trained model (model with best accuracy):
+
+```bash
+infer --input_csv data/processed/test_processed.csv
+```
 
 See all options:
 ```bash
@@ -72,7 +77,7 @@ clear_mlruns
 Preprocess the raw data (train and test):
 
 ```bash
-python -m src.data_preprocessing
+python -m UAPS.data_preprocessing
 ```
 
 This will create `data/processed/train_processed.csv` and `data/processed/test_processed.csv` if they do not already exist.

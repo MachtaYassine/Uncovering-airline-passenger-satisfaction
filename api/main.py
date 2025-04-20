@@ -4,39 +4,10 @@ import mlflow.pyfunc
 import os
 import argparse
 from typing import Optional
+from UAPS.inference import Inference
 from UAPS.data_preprocessing import preprocess_data
 
 app = FastAPI()
-
-class Inference:
-    def __init__(self, model_path: str):
-        self.model = mlflow.pyfunc.load_model(model_path)
-        self.model_type = None
-        try:
-            tags = self.model.metadata.run_id and mlflow.get_run(self.model.metadata.run_id).data.tags
-            if tags and "model_file" in tags:
-                self.model_type = tags["model_file"]
-                print(f"Detected model type from tags: {self.model_type}")
-        except Exception:
-            pass
-        if self.model_type is None:
-            flavors = self.model.metadata.flavors
-            if "pytorch" in flavors:
-                self.model_type = "mlflow_pytorch"
-                print("Detected PyTorch model")
-            elif "sklearn" in flavors:
-                self.model_type = "mlflow_sklearn"
-                print("Detected sklearn model")
-        
-
-    def predict(self, data: pd.DataFrame):
-        if self.model_type == "mlflow_pytorch":
-            data = data.astype("float32")
-        
-        preds = self.model.predict(data)
-        if isinstance(preds, (pd.DataFrame, pd.DataFrame)) and preds.shape[1] > 1:
-            return preds.values.argmax(axis=1)
-        return preds
 
 # Global inference object, will be set in startup event
 inference: Optional[Inference] = None

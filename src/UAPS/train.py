@@ -7,9 +7,12 @@ import mlflow.sklearn
 from mlflow.models.signature import infer_signature
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score
 import pandas as pd
 from tqdm import tqdm
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -44,8 +47,8 @@ def train_torch_model(X_train, y_train, X_val, y_val, epochs=10, lr=1e-3, hidden
     with torch.no_grad():
         preds = model(X_val_tensor).argmax(dim=1).cpu().numpy()
         acc = (preds == y_val_tensor.cpu().numpy()).mean()
-        print(f"Torch NN Validation Accuracy: {acc:.4f}")
-    return model
+        evaluation_results = {"accuracy": acc}
+    return model, evaluation_results
 
 def get_model(args, input_dim=None, num_classes=2):
     if args.model_type == 'random_forest':
@@ -68,25 +71,103 @@ def preprocess_data(data):
     # Add preprocessing steps here
     return data
 
-def train_model(X_train, y_train, use_progress_bar=True):
-    from sklearn.ensemble import RandomForestClassifier
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
+def train_model(X_train, y_train, X_val, y_val, args, use_progress_bar=False):
+
+    model = get_model(args, input_dim=X_train.shape[1], num_classes=len(set(y_train)))
+    model.fit(X_train, y_train)
+    preds = model.predict(X_val)
+    acc = accuracy_score(y_val, preds)
     if use_progress_bar:
-        print("Training model with progress bar...")
         # Simulate progress bar for fitting (since sklearn fit is not incremental)
         for _ in tqdm(range(1), desc="Fitting RandomForest"):
             model.fit(X_train, y_train)
     else:
-        print("Training model...")
         model.fit(X_train, y_train)
-    return model
+    evaluation_results = {"accuracy":acc}
+    return model, evaluation_results
 
-def evaluate_model(model, X_test, y_test):
-    from sklearn.metrics import accuracy_score, classification_report
-    predictions = model.predict(X_test)
-    accuracy = accuracy_score(y_test, predictions)
-    print(classification_report(y_test, predictions))
-    return accuracy
+def cross_validate_model(model, X, y, args, cv=5, batch_size=64, lr=1e-3, epochs=10, device='cuda'):
+    """
+    Perform cross-validation on the model.
+    Args:
+        model: PyTorch model (instance of nn.Module)
+        X: Features (input data)
+        y: Target labels
+        cv: Number of folds for cross-validation
+        batch_size: Mini-batch size for training
+        lr: Learning rate for the optimizer
+        epochs: Number of training epochs
+        device: Device to run the model on ('cpu' or 'cuda')
+    """
+    kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+    fold = 1
+    cv_scores = list()
+
+    # Loop over each fold
+    for train_idx, val_idx in kf.split(X):
+        print(f"Fold {fold}/{cv}")
+        
+        # Split the data into training and validation sets for this fold
+        X_train_fold, X_val_fold = X.iloc[train_idx], X.iloc[val_idx]
+        y_train_fold, y_val_fold = y.iloc[train_idx], y.iloc[val_idx]
+
+        # Train the model on kth fold
+        if args.model_type == 'torch_nn':
+            model, evaluation_results = train_torch_model(X_train_fold, y_train_fold, X_val_fold, y_val_fold, epochs=args.epochs, lr=args.lr, hidden_dim=args.hidden_dim)
+        else:
+            model, evaluation_results = train_model(X_train_fold, y_train_fold, X_val_fold, y_val_fold, args, use_progress_bar=True)
+        accuracy = evaluation_results["accuracy"]
+        print(f"Validation Accuracy for Fold {fold}: {accuracy:.4f}")
+        
+        fold += 1
+        cv_scores.append(accuracy)
+
+    # Calculate average accuracy across all folds
+    avg_accuracy = np.mean(cv_scores)
+    print(f"Average Cross-Validation Accuracy: {avg_accuracy:.4f}")
+
+    # Log each fold's accuracy as a separate metric (optional)
+    for i, score in enumerate(cv_scores):
+        mlflow.log_metric(f"cv_fold_{i+1}_accuracy", score)
+
+    # Log mean and std of CV accuracy
+    mlflow.log_metric("mean_cv_accuracy", np.mean(cv_scores))
+    mlflow.log_metric("std_cv_accuracy", np.std(cv_scores))
+
+# Function to check if current model is the best and save it
+def save_best_model(model, accuracy, args):
+    import re
+    models_dir = "mlruns/models"
+    os.makedirs(models_dir, exist_ok=True)
+
+    # Pattern to find existing model files with accuracy in name
+    pattern = re.compile(r"best_model_(\d+\.\d+)")
+
+    # Look for previously saved models
+    existing_models = [name for name in os.listdir(models_dir) if pattern.match(name)]
+
+    # If no models exist, save current one
+    if not existing_models:
+        model_path = os.path.join(models_dir, f"best_model_{accuracy:.4f}")
+        if args.model_type == 'torch_nn':
+            mlflow.pytorch.save_model(model, path=model_path)
+        else:
+            mlflow.sklearn.save_model(model, path=model_path)
+        print(f"No existing models found. Saved current model as: {model_path}")
+    else:
+        # Find best previous accuracy
+        best_acc = max(float(pattern.match(name).group(1)) for name in existing_models)
+
+        print(f"Best previous accuracy: {best_acc:.4f}")
+        if accuracy > best_acc:
+            model_path = os.path.join(models_dir, f"best_model_{accuracy:.4f}")
+            if args.model_type == 'torch_nn':
+                mlflow.pytorch.save_model(model, path=model_path)
+            else:
+                mlflow.sklearn.save_model(model, path=model_path)
+            print(f"New best model saved at: {model_path}")
+        else:
+            print("Current model is not better. No save performed.")
 
 def main():
     import argparse
@@ -125,15 +206,18 @@ def main():
     if args.no_mlflow:
         print(f"Running training WITHOUT MLflow using model: {args.model_type}")
         if args.model_type == 'torch_nn':
-            model = train_torch_model(X_train, y_train, X_test, y_test, epochs=args.epochs, lr=args.lr, hidden_dim=args.hidden_dim)
-        else:
-            model = get_model(args, input_dim=X_train.shape[1], num_classes=len(set(y_train)))
             print("Training model...")
-            model.fit(X_train, y_train)
-            print("Model training completed.")
-            print("Evaluating model...")
-            preds = model.predict(X_test)
-            acc = accuracy_score(y_test, preds)
+            model, evaluation_results = train_torch_model(X_train, y_train, X_test, y_test, epochs=args.epochs, lr=args.lr, hidden_dim=args.hidden_dim)
+            acc = evaluation_results["accuracy"]
+            print("Cross validation...")
+            cross_validate_model(model, X_train, y_train, args)
+            print(f"Torch NN Final accuracy on test set: {acc:.4f}")
+        else:
+            print("Training model...")
+            model, evaluation_results = train_model(X_train, y_train, X_test, y_test, args, use_progress_bar=True)
+            acc = evaluation_results["accuracy"]
+            print("Cross validation...")
+            cross_validate_model(model, X_train, y_train, args)
             print(f"Final accuracy on test set: {acc:.4f}")
         print("Experiment completed.")
     else:
@@ -158,7 +242,12 @@ def main():
         if args.model_type == 'torch_nn':
             mlflow.log_param("epochs", args.epochs)
             mlflow.log_param("lr", args.lr)
-            model = train_torch_model(X_train, y_train, X_test, y_test, epochs=args.epochs, lr=args.lr, hidden_dim=args.hidden_dim)
+            print("Training model...")
+            model, evaluation_results = train_torch_model(X_train, y_train, X_test, y_test, epochs=args.epochs, lr=args.lr, hidden_dim=args.hidden_dim)
+            acc = evaluation_results["accuracy"]
+            print("Cross validation...")
+            cross_validate_model(model, X_train, y_train, args)
+            print(f"Torch NN Final accuracy on test set: {acc:.4f}")
             model.cpu()
             input_example = X_test.astype('float32').iloc[:2]
             mlflow.pytorch.log_model(
@@ -166,22 +255,22 @@ def main():
                 artifact_path="model",
                 input_example=input_example
             )
-            mlflow.set_tag("model_file", "mlflow_pytorch")  
+            mlflow.log_metric("test accuracy", acc)
+            mlflow.set_tag("model_file", "mlflow_pytorch")
         else:
-            model = get_model(args, input_dim=X_train.shape[1], num_classes=len(set(y_train)))
             print("Training model...")
-            model.fit(X_train, y_train)
-            print("Model training completed.")
-            print("Evaluating model...")
-            preds = model.predict(X_test)
-            acc = accuracy_score(y_test, preds)
+            model, evaluation_results = train_model(X_train, y_train, X_test, y_test, args, use_progress_bar=True)
+            acc = evaluation_results["accuracy"]
+            print("Cross validation...")
+            cross_validate_model(model, X_train, y_train, args)
             print(f"Final accuracy on test set: {acc:.4f}")
             mlflow.log_param("model_type", args.model_type)
-            mlflow.log_metric("accuracy", acc)
+            mlflow.log_metric("test accuracy", acc)
             signature = infer_signature(X_train, model.predict(X_train))
             input_example = X_train.iloc[:1]
             mlflow.sklearn.log_model(model, "model", signature=signature, input_example=input_example)
             mlflow.set_tag("model_file", "mlflow_sklearn")
+        save_best_model(model, acc, args)
         active_run = mlflow.active_run()
         if active_run is not None:
             print(f"Experiment ID: {active_run.info.experiment_id}")
