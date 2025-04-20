@@ -13,6 +13,8 @@ class FeatureEngineeringStrategy(ABC):
     def apply_transformation(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
 
+
+
 # === Log Transformation Strategy ===
 class LogTransformation(FeatureEngineeringStrategy):
     def __init__(self, features):
@@ -61,12 +63,19 @@ class OneHotEncoding(FeatureEngineeringStrategy):
     def apply_transformation(self, df: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Applying one-hot encoding to features: {self.features}")
         df_transformed = df.copy()
+
+    # Encode features
+        encoded_array = self.encoder.fit_transform(df[self.features])
         encoded_df = pd.DataFrame(
-            self.encoder.fit_transform(df[self.features]),
-            columns=self.encoder.get_feature_names_out(self.features)
-        )
-        df_transformed = df_transformed.drop(columns=self.features).reset_index(drop=True)
+        encoded_array,
+        columns=self.encoder.get_feature_names_out(self.features),
+        index=df.index  # Important: align index with original df
+    )
+
+    # Drop original and concat new
+        df_transformed = df_transformed.drop(columns=self.features)
         df_transformed = pd.concat([df_transformed, encoded_df], axis=1)
+
         logging.info("One-hot encoding completed.")
         return df_transformed
 
@@ -86,6 +95,9 @@ class BinaryEncoding(FeatureEngineeringStrategy):
         logging.info("Binary encoding completed.")
         return df_encoded
 
+
+
+
 # === Feature Engineering Context ===
 class FeatureEngineer:
     def __init__(self, strategy: FeatureEngineeringStrategy):
@@ -99,12 +111,19 @@ class FeatureEngineer:
         logging.info("Applying feature engineering strategy.")
         return self._strategy.apply_transformation(df)
 
+
 # === Example Usage ===
+from src import preprocessing
 if __name__ == "__main__":
     # Example DataFrame (replace this with your actual dataset)
     df = pd.read_csv("/Users/rouablel/Uncovering-airline-passenger-satisfaction/Data/train.csv")
-    
-    # Assume these are predefined
+    prep = preprocessing.Preprocessor(drop_cols=['Unnamed: 0','id'], cat_cols=['Gender', 'Customer Type', 'Type of Travel',
+                                                    'Class', 'Inflight wifi service', 'Departure/Arrival time convenient',
+                                                      'Ease of Online booking', 'Gate location', 'Food and drink',
+                                                        'Online boarding', 'Seat comfort', 'Inflight entertainment',
+                                                          'On-board service', 'Leg room service', 'Baggage handling',
+                                                            'Checkin service', 'Inflight service', 'Cleanliness',"satisfaction"])
+    df = prep.transform(df)
     categorical_columns = [c for c in df.columns if df[c].dtype.name == 'category']
     # list of your categorical columns
     data_describe = df[categorical_columns].nunique()
@@ -121,9 +140,12 @@ if __name__ == "__main__":
     # One-Hot Encoding
     onehot_encoder = FeatureEngineer(OneHotEncoding(nonbinary_columns))
     df = onehot_encoder.apply_feature_engineering(df)
+    
+
 
     # Standard Scaling
     scaler = FeatureEngineer(LogTransformation(numerical_columns))
     df = scaler.apply_feature_engineering(df)
 
-    print("Transformed dataset shape:", df.shape)
+
+   
