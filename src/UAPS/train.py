@@ -134,7 +134,40 @@ def cross_validate_model(model, X, y, args, cv=5, batch_size=64, lr=1e-3, epochs
     mlflow.log_metric("mean_cv_accuracy", np.mean(cv_scores))
     mlflow.log_metric("std_cv_accuracy", np.std(cv_scores))
 
+# Function to check if current model is the best and save it
+def save_best_model(model, accuracy, args):
+    import re
+    models_dir = "mlruns/models"
+    os.makedirs(models_dir, exist_ok=True)
 
+    # Pattern to find existing model files with accuracy in name
+    pattern = re.compile(r"best_model_(\d+\.\d+)")
+
+    # Look for previously saved models
+    existing_models = [name for name in os.listdir(models_dir) if pattern.match(name)]
+
+    # If no models exist, save current one
+    if not existing_models:
+        model_path = os.path.join(models_dir, f"best_model_{accuracy:.4f}")
+        if args.model_type == 'torch_nn':
+            mlflow.pytorch.save_model(model, path=model_path)
+        else:
+            mlflow.sklearn.save_model(model, path=model_path)
+        print(f"No existing models found. Saved current model as: {model_path}")
+    else:
+        # Find best previous accuracy
+        best_acc = max(float(pattern.match(name).group(1)) for name in existing_models)
+
+        print(f"Best previous accuracy: {best_acc:.4f}")
+        if accuracy > best_acc:
+            model_path = os.path.join(models_dir, f"best_model_{accuracy:.4f}")
+            if args.model_type == 'torch_nn':
+                mlflow.pytorch.save_model(model, path=model_path)
+            else:
+                mlflow.sklearn.save_model(model, path=model_path)
+            print(f"New best model saved at: {model_path}")
+        else:
+            print("Current model is not better. No save performed.")
 
 def main():
     import argparse
@@ -223,7 +256,7 @@ def main():
                 input_example=input_example
             )
             mlflow.log_metric("test accuracy", acc)
-            mlflow.set_tag("model_file", "mlflow_pytorch")  
+            mlflow.set_tag("model_file", "mlflow_pytorch")
         else:
             print("Training model...")
             model, evaluation_results = train_model(X_train, y_train, X_test, y_test, args, use_progress_bar=True)
@@ -237,6 +270,7 @@ def main():
             input_example = X_train.iloc[:1]
             mlflow.sklearn.log_model(model, "model", signature=signature, input_example=input_example)
             mlflow.set_tag("model_file", "mlflow_sklearn")
+        save_best_model(model, acc, args)
         active_run = mlflow.active_run()
         if active_run is not None:
             print(f"Experiment ID: {active_run.info.experiment_id}")
