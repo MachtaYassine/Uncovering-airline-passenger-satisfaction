@@ -2,37 +2,35 @@ import os
 import argparse
 import pandas as pd
 import mlflow.pyfunc
+from UAPS.data_preprocessing import preprocess_data
 
 class Inference:
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, preprocess: bool = False):
         self.model = mlflow.pyfunc.load_model(model_path)
-        # Detect model type from MLflow tags or flavor
         self.model_type = None
+        self.preprocess = preprocess
         try:
-            # Try to get from MLflow tags
             tags = self.model.metadata.run_id and mlflow.get_run(self.model.metadata.run_id).data.tags
             if tags and "model_file" in tags:
                 self.model_type = tags["model_file"]
                 print(f"Detected model type from tags: {self.model_type}")
         except Exception:
             pass
-        # Fallback: check flavors
         if self.model_type is None:
             flavors = self.model.metadata.flavors
             if "pytorch" in flavors:
-                print("Detected PyTorch model")
                 self.model_type = "mlflow_pytorch"
+                print("Detected PyTorch model")
             elif "sklearn" in flavors:
-                print("Detected sklearn model")
                 self.model_type = "mlflow_sklearn"
-        
+                print("Detected sklearn model")
         
     def predict(self, data: pd.DataFrame):
-        # Handle dtype conversion based on model type
+        if self.preprocess:
+            data = preprocess_data(data)
         if self.model_type == "mlflow_pytorch":
             data = data.astype("float32")
         preds = self.model.predict(data)
-        # If output looks like logits/probs, convert to class labels
         if isinstance(preds, (pd.DataFrame, pd.DataFrame)) and preds.shape[1] > 1:
             return preds.values.argmax(axis=1)
         return preds
@@ -42,6 +40,7 @@ def main():
     parser.add_argument("--experiment_id", type=str, required=True, help="MLflow experiment ID")
     parser.add_argument("--run_id", type=str, required=True, help="MLflow run ID")
     parser.add_argument("--input_csv", type=str, required=True, help="Path to CSV file with input data (must match training features)")
+    parser.add_argument("--preprocess", action="store_true", help="Whether to preprocess the input data before inference.")
     args = parser.parse_args()
 
     model_path = os.path.join("mlruns", args.experiment_id, args.run_id, "artifacts", "model")
@@ -54,7 +53,7 @@ def main():
         if col in data.columns:
             data = data.drop(columns=[col])
 
-    inference = Inference(model_path)
+    inference = Inference(model_path, preprocess=args.preprocess)
     preds = inference.predict(data)
     print(preds)
 
